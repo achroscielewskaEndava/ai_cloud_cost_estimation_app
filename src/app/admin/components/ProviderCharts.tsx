@@ -27,10 +27,12 @@ interface CompareData {
 
 type SingleDataPoint = SingleData & {
   fill: string;
+  gradientId: string;
 };
 
 type CompareDataPoint = CompareData & {
   fill: string;
+  gradientId: string;
 };
 
 interface ProviderChartsProps {
@@ -40,6 +42,106 @@ interface ProviderChartsProps {
   periodALabel?: string;
   periodBLabel?: string;
 }
+
+const toId = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+const shadeHex = (hex: string, percent: number) => {
+  const normalized = hex.replace("#", "");
+  if (normalized.length !== 6) return hex;
+  const num = parseInt(normalized, 16);
+  const r = (num >> 16) & 0xff;
+  const g = (num >> 8) & 0xff;
+  const b = num & 0xff;
+  const target = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent);
+  const nr = Math.round((target - r) * p + r);
+  const ng = Math.round((target - g) * p + g);
+  const nb = Math.round((target - b) * p + b);
+  return `#${((nr << 16) | (ng << 8) | nb).toString(16).padStart(6, "0")}`;
+};
+
+const CubeBar = (props: {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: string | number;
+  fillOpacity?: string | number;
+}) => {
+  const { x = 0, y = 0, width = 0, height = 0, fill = "#000" } = props;
+  if (width <= 0 || height <= 0) return null;
+
+  const dx = Math.min(15, Math.max(8, width * 0.45));
+  const dy = Math.min(10, Math.max(2, height * 0.2));
+  const topY = y - dy;
+  const sideX = x + width + dx;
+  const bottomY = y + height;
+
+  const stroke = props.stroke ?? "rgba(0, 0, 0, 0.18)";
+  const strokeWidth = props.strokeWidth ?? 0.6;
+  const opacity = props.fillOpacity ?? 1;
+
+  return (
+    <g opacity={opacity}>
+      <polygon
+        points={`${x},${y} ${x + width},${y} ${sideX},${topY} ${x + dx},${topY}`}
+        fill={shadeHex(fill, 0.18)}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+      />
+      <polygon
+        points={`${x + width},${y} ${sideX},${topY} ${sideX},${topY + height} ${x + width},${bottomY}`}
+        fill={shadeHex(fill, -0.18)}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+      />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+      />
+    </g>
+  );
+};
+
+const renderGradientDefs = (
+  entries: { gradientId: string; fill: string }[],
+) => (
+  <defs>
+    <filter id="depth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow
+        dx="0"
+        dy="2"
+        stdDeviation="1.5"
+        floodColor="rgba(0, 0, 0, 0.35)"
+      />
+    </filter>
+    {entries.map((entry) => (
+      <linearGradient
+        key={entry.gradientId}
+        id={entry.gradientId}
+        x1="0"
+        y1="0"
+        x2="0"
+        y2="1"
+      >
+        <stop offset="0%" stopColor={shadeHex(entry.fill, 0.25)} />
+        <stop offset="55%" stopColor={entry.fill} />
+        <stop offset="100%" stopColor={shadeHex(entry.fill, -0.2)} />
+      </linearGradient>
+    ))}
+  </defs>
+);
 
 const ProviderCharts = ({
   mode,
@@ -55,6 +157,7 @@ const ProviderCharts = ({
     fill:
       PROVIDER_HEX[entry.provider as keyof typeof PROVIDER_HEX] ??
       DEFAULT_COLOR,
+    gradientId: `provider-${toId(entry.provider)}`,
   }));
 
   const compareDataWithColors: CompareDataPoint[] = compareData.map(
@@ -63,6 +166,7 @@ const ProviderCharts = ({
       fill:
         PROVIDER_HEX[entry.provider as keyof typeof PROVIDER_HEX] ??
         DEFAULT_COLOR,
+      gradientId: `provider-${toId(entry.provider)}`,
     }),
   );
 
@@ -86,7 +190,12 @@ const ProviderCharts = ({
             borderRadius: 8,
           }}
         />
-        <Bar dataKey="count" radius={[6, 6, 0, 0]} />
+        <Bar
+          dataKey="count"
+          shape={(props) => (
+            <CubeBar {...props} fill={props.payload?.fill ?? "#000"} />
+          )}
+        />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -119,7 +228,7 @@ const ProviderCharts = ({
             DEFAULT_COLOR
           }
           fillOpacity={0.6}
-          radius={[6, 6, 0, 0]}
+          shape={<CubeBar />}
         />
         <Bar
           dataKey="countPeriodB"
@@ -128,7 +237,7 @@ const ProviderCharts = ({
             PROVIDER_HEX[periodBLabel as keyof typeof PROVIDER_HEX] ??
             DEFAULT_COLOR
           }
-          radius={[6, 6, 0, 0]}
+          shape={<CubeBar />}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -137,8 +246,12 @@ const ProviderCharts = ({
   const renderSinglePie = () => (
     <ResponsiveContainer width="100%" height={350}>
       <PieChart>
+        {renderGradientDefs(singleDataWithColors)}
         <Pie
-          data={singleDataWithColors}
+          data={singleDataWithColors.map((entry) => ({
+            ...entry,
+            fill: `url(#${entry.gradientId})`,
+          }))}
           dataKey="count"
           nameKey="provider"
           cx="50%"
@@ -149,7 +262,9 @@ const ProviderCharts = ({
           label={({ name, percent }) =>
             `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
           }
-        />
+          stroke="rgba(0, 0, 0, 0.18)"
+          strokeWidth={0.6}
+        ></Pie>
         <Tooltip
           contentStyle={{
             border: "unset",
