@@ -1,0 +1,8 @@
+{
+  "data": [
+    { "provider": "AWS", "countPeriodA": 120, "countPeriodB": 150 },
+    { "provider": "Azure", "countPeriodA": 70, "countPeriodB": 90 },
+    { "provider": "GCP", "countPeriodA": 20, "countPeriodB": 15 },
+    { "provider": "Vercel", "countPeriodA": 3, "countPeriodB": 10 }
+  ]
+}

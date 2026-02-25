@@ -1,0 +1,35 @@
+const PROVIDERS = ["AWS", "Azure", "GCP", "Vercel"] as const;
+type Provider = (typeof PROVIDERS)[number];
+
+export const PROVIDER_HEX: Record<Provider, string> = {
+  AWS: "#CF820E",
+  Azure: "#5899C4",
+  GCP: "#30A661",
+  Vercel: "#8684BF",
+};
+
+export const DEFAULT_COLOR = "#7C94A6";
+
+export function ProviderDot({ provider }: { provider: string }) {
+  return (
+    <span
+      className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+      style={{
+        background: PROVIDER_HEX[provider as Provider] ?? DEFAULT_COLOR,
+      }}
+    />
+  );
+}
+
+export default function Legend({ providers }: { providers: string[] }) {
+  return (
+    <div className="flex items-center gap-4">
+      {providers.map((p) => (
+        <div key={p} className="flex items-center gap-1.5">
+          <ProviderDot provider={p} />
+          <span className="text-xs text-muted-foreground">{p}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
