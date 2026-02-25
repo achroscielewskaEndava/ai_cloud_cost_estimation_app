@@ -11,11 +11,16 @@ export const PROVIDER_HEX: Record<Provider, string> = {
 export const DEFAULT_COLOR = "#7C94A6";
 
 export function ProviderDot({ provider }: { provider: string }) {
+  const color = PROVIDER_HEX[provider as Provider] ?? DEFAULT_COLOR;
+
   return (
     <span
       className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
       style={{
-        background: PROVIDER_HEX[provider as Provider] ?? DEFAULT_COLOR,
+        background: color,
+        border: "0.1px solid rgba(0, 0, 0, 0.18)",
+        boxShadow:
+          "inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -1px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35)",
       }}
     />
   );

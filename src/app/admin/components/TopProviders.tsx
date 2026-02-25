@@ -13,7 +13,17 @@ function Stats({ stats, max }: { stats: StatisticsSingle[]; max: number }) {
           <div className="flex items-center justify-between text-sm mb-1">
             <div className="flex items-center gap-1">
               <span className="text-muted-foreground font-mono">#{i + 1}</span>
-              <div className="h-2.5 w-2.5 rounded-full" />
+              <span
+                className="inline-block h-2.5 w-2.5 rounded-full shrink-0"
+                style={{
+                  background:
+                    PROVIDER_HEX[p.provider as keyof typeof PROVIDER_HEX] ??
+                    DEFAULT_COLOR,
+                  border: "0.1px solid rgba(0, 0, 0, 0.18)",
+                  boxShadow:
+                    "inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -1px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35)",
+                }}
+              />
               <span className="font-medium">{p.provider}</span>
             </div>
             <span className="font-mono">{p.count}</span>
@@ -26,6 +36,8 @@ function Stats({ stats, max }: { stats: StatisticsSingle[]; max: number }) {
                 background:
                   PROVIDER_HEX[p.provider as keyof typeof PROVIDER_HEX] ??
                   DEFAULT_COLOR,
+                boxShadow:
+                  "inset 0 1px 1px rgba(255, 255, 255, 0.55), inset 0 -1px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35)",
               }}
             />
           </div>
