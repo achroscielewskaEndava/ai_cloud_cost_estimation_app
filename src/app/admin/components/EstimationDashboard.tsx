@@ -16,12 +16,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useState } from "react";
-import responseSingleMock from "../../data/statisticsResponseSingle.json";
+import { useEffect, useState } from "react";
 import responseCompareMock from "../../data/statisticsResponseCompare.json";
 import TopProviders from "@/app/admin/components/TopProviders";
 import ProviderCharts from "@/app/admin/components/ProviderCharts";
 import { format } from "date-fns";
+
+interface SingleResponse {
+  provider: string;
+  count: number;
+}
 
 export const CHART_MODES = ["single", "compare"] as const;
 export type ChartMode = (typeof CHART_MODES)[number];
@@ -41,6 +45,13 @@ interface Props {
 }
 
 export default function EstimationDashboard({ providers }: Props) {
+  const currentMonth = new Date();
+  const previousMonth = new Date(
+    currentMonth.getFullYear(),
+    currentMonth.getMonth() - 1,
+    1,
+  );
+
   const [mode, setMode] = useState<ChartMode>("single");
   const [singleValue, setSingleValue] = useState<MonthOrDayPickerValue>({
     mode: "months",
@@ -48,9 +59,44 @@ export default function EstimationDashboard({ providers }: Props) {
   });
   const [rangeValue, setRangeValue] = useState<RangeMonthOrDayPickerValue>({
     mode: "months",
-    periodA: new Date(),
-    periodB: null,
+    periodA: previousMonth,
+    periodB: currentMonth,
   });
+
+  const [fetching, setFetching] = useState(false);
+  const [responseSingle, setResponseSingle] = useState<SingleResponse[]>();
+
+  async function getStatistics(singleValue: MonthOrDayPickerValue) {
+    const date = format(
+      singleValue.date,
+      singleValue.mode === "months" ? "yyyy-MM" : "yyyy-MM-dd",
+    );
+    const queryKey = singleValue.mode === "months" ? "month" : "day";
+    try {
+      setFetching(true);
+      const response = await fetch(
+        `/api/estimations-statistics?${queryKey}=${date}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.data) {
+        setResponseSingle(result.data);
+      }
+    } catch (error) {
+      console.error("Error fetching providers:", error);
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  useEffect(() => {
+    getStatistics(singleValue);
+  }, [singleValue]);
 
   return (
     <Card className="border border-white/15 bg-white/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-xl">
@@ -81,7 +127,7 @@ export default function EstimationDashboard({ providers }: Props) {
               {mode === "single" && (
                 <ProviderCharts
                   mode="single"
-                  singleData={responseSingleMock.data}
+                  singleData={responseSingle ?? []}
                 />
               )}
               {mode === "compare" && (
@@ -103,12 +149,9 @@ export default function EstimationDashboard({ providers }: Props) {
                     singleValue.date,
                     singleValue.mode,
                   )}
-                  statistics={responseSingleMock.data}
+                  statistics={responseSingle ?? []}
                 />
-                <TopProviders
-                  mode="single"
-                  statistics={responseSingleMock.data}
-                />
+                <TopProviders mode="single" statistics={responseSingle ?? []} />
               </>
             )}
             {mode === "compare" && (

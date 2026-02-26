@@ -4,7 +4,7 @@ export function useStatistics() {
   const saveStatistics = async (selectedProviders: Provider[]) => {
     const providerIds = selectedProviders.map((p) => p.id);
     try {
-      const res = await fetch("/api/estimation-statistics", {
+      const res = await fetch("/api/estimations-statistics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ providerIds }),
