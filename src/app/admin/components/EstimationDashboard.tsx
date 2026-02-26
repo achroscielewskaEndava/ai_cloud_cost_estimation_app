@@ -150,6 +150,7 @@ export default function EstimationDashboard({ providers }: Props) {
                     singleValue.mode,
                   )}
                   statistics={responseSingle ?? []}
+                  providers={providers.map((p) => p.name)}
                 />
                 <TopProviders mode="single" statistics={responseSingle ?? []} />
               </>
@@ -163,6 +164,7 @@ export default function EstimationDashboard({ providers }: Props) {
                     singleValue.mode,
                   )}
                   statistics={responseCompareMock.data}
+                  providers={providers.map((p) => p.name)}
                 />
                 <TopProviders
                   mode="compare"

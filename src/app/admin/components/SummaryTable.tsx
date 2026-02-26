@@ -34,12 +34,14 @@ const deltaLabel = (delta: number) => {
 export type StatisticsSingle = {
   provider: string;
   count?: number;
+  providers?: string[];
 };
 
 export type StatisticsCompare = {
   provider: string;
   countPeriodA?: number;
   countPeriodB?: number;
+  providers?: string[];
 };
 
 type Props =
@@ -47,21 +49,44 @@ type Props =
       mode: "single";
       statistics: StatisticsSingle[];
       singleValueDate: string;
+      providers: string[];
     }
   | {
       mode: "compare";
       statistics: StatisticsCompare[];
       singleValueDate: string;
+      providers: string[];
     };
 
 export default function SummaryTable({
   mode,
   singleValueDate,
   statistics,
+  providers,
 }: Props) {
+  const singleRows =
+    mode === "single"
+      ? providers.map((provider) => {
+          const stat = statistics.find((item) => item.provider === provider);
+          return { provider, count: stat?.count ?? 0 };
+        })
+      : [];
+
+  const compareRows =
+    mode === "compare"
+      ? providers.map((provider) => {
+          const stat = statistics.find((item) => item.provider === provider);
+          return {
+            provider,
+            countPeriodA: stat?.countPeriodA ?? 0,
+            countPeriodB: stat?.countPeriodB ?? 0,
+          };
+        })
+      : [];
+
   const delta =
     mode === "compare"
-      ? statistics.reduce(
+      ? compareRows.reduce(
           (acc, stat) =>
             acc + ((stat.countPeriodB || 0) - (stat.countPeriodA || 0)),
           0,
@@ -87,7 +112,7 @@ export default function SummaryTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {statistics.map((stat) => (
+              {singleRows.map((stat) => (
                 <TableRow key={stat.provider}>
                   <TableCell>
                     <ProviderDot provider={stat.provider} />
@@ -103,7 +128,7 @@ export default function SummaryTable({
               <TableRow>
                 <TableCell>Total</TableCell>
                 <TableCell className="text-right">
-                  {statistics.reduce((acc, stat) => acc + (stat.count || 0), 0)}
+                  {singleRows.reduce((acc, stat) => acc + (stat.count || 0), 0)}
                 </TableCell>
               </TableRow>
             </TableFooter>
@@ -126,7 +151,7 @@ export default function SummaryTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {statistics.map((stat) => (
+              {compareRows.map((stat) => (
                 <TableRow key={stat.provider}>
                   <TableCell>
                     <ProviderDot provider={stat.provider} />
@@ -153,13 +178,13 @@ export default function SummaryTable({
                 <TableRow>
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right">
-                    {statistics.reduce(
+                    {compareRows.reduce(
                       (acc, stat) => acc + (stat.countPeriodA || 0),
                       0,
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {statistics.reduce(
+                    {compareRows.reduce(
                       (acc, stat) => acc + (stat.countPeriodB || 0),
                       0,
                     )}

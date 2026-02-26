@@ -70,7 +70,13 @@ export default function TopProviders({ mode, statistics }: Props) {
           <CardTitle>Top 3 Providers</CardTitle>
         </CardHeader>
         <CardContent>
-          <Stats stats={top3} max={max} />
+          {statistics.length === 0 ? (
+            <div className="text-xs">
+              No data available for the selected period.
+            </div>
+          ) : (
+            <Stats stats={top3} max={max} />
+          )}
         </CardContent>
       </Card>
     );
