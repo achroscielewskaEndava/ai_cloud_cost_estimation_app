@@ -1,17 +1,15 @@
-create table public.estimations_stats (
+create table public.estimations_statistics (
   id uuid primary key default gen_random_uuid(),
-  created_at timestamptz not null default now(),
-  created_by uuid null references auth.users(id)
+  created_at timestamptz not null default now()
 );
 
-create index on public.estimations_stats (created_at);
-create index on public.estimations_stats (created_by);
+create index on public.estimations_statistics (created_at);
 
-create table public.estimation_stats_providers (
-  estimation_id uuid not null references public.estimations_stats(id) on delete cascade,
-  provider_id smallint not null references public.providers(id),
+create table public.estimations_statistics_providers (
+  estimation_id uuid not null references public.estimations_statistics(id) on delete cascade,
+  provider_id uuid not null references public.providers(id),
   primary key (estimation_id, provider_id)
 );
 
-create index on public.estimation_stats_providers (provider_id);
-create index on public.estimation_providers (estimation_id);
+create index on public.estimations_statistics_providers (provider_id);
+create index on public.estimations_statistics_providers (estimation_id);

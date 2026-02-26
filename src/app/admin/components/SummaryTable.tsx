@@ -18,20 +18,18 @@ const deltaColorClass = (delta: number) =>
       ? "text-green-500" // Period B > Period A
       : "text-muted-foreground";
 
-const deltaLabel = (delta: number) =>
-  delta < 0 ? (
+const deltaLabel = (delta: number) => {
+  if (delta === 0) return "-";
+
+  const Icon = delta > 0 ? MoveUp : MoveDown;
+
+  return (
     <>
-      <MoveDown className="h-3 w-3 pb-0.5 inline-block" />
+      <Icon className="h-3 w-3 pb-0.5 inline-block" />
       {Math.abs(delta)}
     </>
-  ) : delta > 0 ? (
-    <>
-      <MoveUp className="h-3 w-3 pb-0.5 inline-block" />
-      {delta}
-    </>
-  ) : (
-    "-"
   );
+};
 
 export type StatisticsSingle = {
   provider: string;

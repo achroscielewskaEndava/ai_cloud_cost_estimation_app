@@ -8,50 +8,35 @@ import { Loader2, RefreshCw, RotateCcw, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Usage from "@/app/estimation/components/Usage";
 import Results from "@/app/estimation/components/Result";
-import Providers from "@/app/estimation/components/Providers";
-import { EstimateResponse } from "@/app/api/estimation/route";
+import Providers, { Provider } from "@/app/estimation/components/Providers";
+import { useStatistics } from "@/app/estimation/hooks/useStatistics";
+import { useSendToAI } from "@/app/estimation/hooks/useSendToAi";
 
 export default function EstimationPage() {
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [selectedProviders, setSelectedProviders] = useState<Provider[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<EstimateResponse | null>(null);
-  const [lastPayload, setLastPayload] = useState<unknown>(null);
 
-  const toggleProvider = (name: string) => {
+  const { saveStatistics } = useStatistics();
+  const { sendToAI, loading, results, setResults } = useSendToAI();
+
+  const toggleProvider = (provider: Provider) => {
     setSelectedProviders((prev) =>
-      prev.includes(name) ? prev.filter((p) => p !== name) : [...prev, name],
+      prev.includes(provider)
+        ? prev.filter((p) => p !== provider)
+        : [...prev, provider],
     );
   };
 
-  const sendToAI = async (payload?: unknown) => {
-    const body = payload ?? {
-      providers: selectedProviders,
-      usage: answers,
-      notes,
-    };
-    setLastPayload(body);
-    setLoading(true);
-    setResults(null);
-
-    try {
-      const res = await fetch("/api/estimation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const data = await res.json();
-      setResults(data);
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false);
-    }
+  const handleEstimation = async () => {
+    await Promise.allSettled([
+      sendToAI(
+        selectedProviders.map((p) => p.name),
+        answers,
+        notes,
+      ),
+      saveStatistics(selectedProviders),
+    ]);
   };
 
   const restart = () => {
@@ -59,7 +44,6 @@ export default function EstimationPage() {
     setAnswers({});
     setNotes("");
     setResults(null);
-    setLastPayload(null);
   };
 
   return (
@@ -101,7 +85,7 @@ export default function EstimationPage() {
           <div className="flex justify-center">
             <Button
               size="lg"
-              onClick={() => sendToAI()}
+              onClick={() => handleEstimation()}
               disabled={loading || selectedProviders.length === 0}
               className="px-8 py-6 text-base font-semibold rounded-xl"
             >
@@ -142,7 +126,7 @@ export default function EstimationPage() {
                 <div className="mt-6 flex justify-center gap-4">
                   <Button
                     variant="outline"
-                    onClick={() => sendToAI(lastPayload)}
+                    onClick={() => handleEstimation()}
                     disabled={loading}
                   >
                     <RefreshCw className="mr-2 h-4 w-4" /> Regenerate

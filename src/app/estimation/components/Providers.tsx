@@ -5,18 +5,21 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+export interface Provider {
+  id: string;
+  name: string;
+}
+
 interface Props {
-  selectedProviders: string[];
-  onToggleProvider: (name: string) => void;
+  selectedProviders: Provider[];
+  onToggleProvider: (provider: Provider) => void;
 }
 
 export default function Providers({
   selectedProviders,
   onToggleProvider,
 }: Props) {
-  const [providers, setProviders] = useState<{ id: string; name: string }[]>(
-    [],
-  );
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -58,11 +61,11 @@ export default function Providers({
             <label
               key={p.id}
               className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 shadow-xs transition-colors hover:bg-muted data-[selected=true]:border-primary data-[selected=true]:bg-primary/5"
-              data-selected={selectedProviders.includes(p.name)}
+              data-selected={selectedProviders.includes(p)}
             >
               <Checkbox
-                checked={selectedProviders.includes(p.name)}
-                onCheckedChange={() => onToggleProvider(p.name)}
+                checked={selectedProviders.includes(p)}
+                onCheckedChange={() => onToggleProvider(p)}
               />
               <span className="font-medium">{p.name}</span>
             </label>
