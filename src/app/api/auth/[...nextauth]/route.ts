@@ -12,6 +12,7 @@ async function getRoleFromDb(params: {
   email?: string | null;
 }): Promise<UserRole> {
   const { provider, providerId, email } = params;
+  const normalizedEmail = email?.toLowerCase() ?? null;
 
   // 1) prefer: provider + provider_id
   if (provider && providerId) {
@@ -27,11 +28,11 @@ async function getRoleFromDb(params: {
   }
 
   // 2) fallback: email
-  if (email) {
+  if (normalizedEmail) {
     const { data, error } = await supabase
       .from("users")
       .select("role")
-      .eq("email", email)
+      .ilike("email", normalizedEmail)
       .maybeSingle();
 
     if (error) throw error;
@@ -123,7 +124,7 @@ export const authOptions: AuthOptions = {
         const { data: byEmail, error: findByEmailError } = await supabase
           .from("users")
           .select("id, role")
-          .eq("email", email)
+          .ilike("email", normalizedEmail)
           .maybeSingle();
 
         if (findByEmailError) {
@@ -159,7 +160,7 @@ export const authOptions: AuthOptions = {
 
         // 3) Jeśli nie znaleziono -> insert z domyślną rolą 'user'
         const { error: insertError } = await supabase.from("users").insert({
-          email, // jeśli Twoja kolumna email ma NOT NULL, to email musi być zawsze dostępny
+          email: normalizedEmail, // trzymaj email w spójnym formacie
           name,
           image,
           provider,

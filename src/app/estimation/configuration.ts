@@ -15,7 +15,14 @@ export const usageQuestions = [
   {
     id: "MAU",
     label: "Monthly active users (MAU)",
-    options: ["1–100", "100–1,000", "1,000–10,000", "10,000–50,000", "50,000+"],
+    options: [
+      "1–100",
+      "100–1,000",
+      "1,000–10,000",
+      "10,000–50,000",
+      "50,000-100,000",
+      "100,000+",
+    ],
     category: "ApplicationUsage",
   },
   {
