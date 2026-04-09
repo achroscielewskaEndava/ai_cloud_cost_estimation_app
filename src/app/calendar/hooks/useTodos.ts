@@ -1,14 +1,15 @@
 import { MonthlyTask } from "@/lib/calendarData";
+import { useState } from "react";
 
 export function useTodos() {
-  const loadTodos = async (
-    year: number,
-    month: number,
-    monthKey: string,
-    setAllTodos: React.Dispatch<
-      React.SetStateAction<Record<string, MonthlyTask[]>>
-    >,
-  ) => {
+  const [allTodos, setAllTodos] = useState<Record<string, MonthlyTask[]>>({});
+  const [loadingTodosByMonth, setLoadingTodosByMonth] = useState<
+    Record<string, boolean>
+  >({});
+
+  const loadTodos = async (year: number, month: number, monthKey: string) => {
+    setLoadingTodosByMonth((prev) => ({ ...prev, [monthKey]: true }));
+
     try {
       const response = await fetch(
         `/api/calendar-todos?year=${year}&month=${month}`,
@@ -28,10 +29,19 @@ export function useTodos() {
       setAllTodos((prev) => ({ ...prev, [monthKey]: todos }));
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoadingTodosByMonth((prev) => ({ ...prev, [monthKey]: false }));
     }
   };
 
-  const updateTodos = (updated: MonthlyTask[], year: number, month: number) => {
+  const updateTodos = (
+    updated: MonthlyTask[],
+    year: number,
+    month: number,
+    monthKey: string,
+  ) => {
+    setAllTodos((prev) => ({ ...prev, [monthKey]: updated }));
+
     void fetch("/api/calendar-todos", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -56,5 +66,5 @@ export function useTodos() {
     });
   };
 
-  return { loadTodos, updateTodos };
+  return { allTodos, loadingTodosByMonth, loadTodos, updateTodos };
 }

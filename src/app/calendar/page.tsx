@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { CalendarGrid } from "@/components/CalendarGrid";
-import { MonthNavigator } from "@/components/MonthNavigator";
+import { MonthNavigator } from "@/app/calendar/components/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
 import {
   generateMockCompletions,
@@ -26,14 +26,9 @@ export default function Calendar() {
     };
   });
 
-  const [allTodos, setAllTodos] = useState<Record<string, MonthlyTask[]>>({});
-  const [loadingTodosByMonth, setLoadingTodosByMonth] = useState<
-    Record<string, boolean>
-  >({});
-
-  const { loadTodos, updateTodos } = useTodos();
-
   const monthKey = `${year}-${month}`;
+
+  const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
 
   const toggleCell = useCallback(
     (dateKey: string, taskId: string) => {
@@ -57,15 +52,16 @@ export default function Calendar() {
     if (allTodos[monthKey] || loadingTodosByMonth[monthKey]) return;
 
     const handleLoadTodos = async () => {
-      setLoadingTodosByMonth((prev) => ({ ...prev, [monthKey]: true }));
-      await loadTodos(year, month, monthKey, setAllTodos);
-
-      setLoadingTodosByMonth((prev) => ({ ...prev, [monthKey]: false }));
+      await loadTodos(year, month, monthKey);
     };
 
     void handleLoadTodos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allTodos, loadingTodosByMonth, month, monthKey, year]);
+
+  const handleUpdateTodos = async (updated: MonthlyTask[]) => {
+    await updateTodos(updated, year, month, monthKey);
+  };
 
   const navigate = (dir: -1 | 1) => {
     setMonth((prev) => {
@@ -85,11 +81,6 @@ export default function Calendar() {
   const goToday = () => {
     setYear(now.getFullYear());
     setMonth(now.getMonth());
-  };
-
-  const handleUpdateTodos = async (updated: MonthlyTask[]) => {
-    setAllTodos((prev) => ({ ...prev, [monthKey]: updated }));
-    await updateTodos(updated, year, month);
   };
 
   return (

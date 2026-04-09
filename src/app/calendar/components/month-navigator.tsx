@@ -25,14 +25,12 @@ export function MonthNavigator({
       >
         ←
       </Button>
-      <button
-        onClick={onToday}
-        className="text-center min-w-[160px] hover:opacity-70 transition-opacity"
-      >
+      <div className="text-center min-w-[160px]">
         <h1 className="text-lg font-semibold text-foreground tracking-tight">
           {month + 1} / {year}
         </h1>
-      </button>
+      </div>
+
       <Button
         variant="ghost"
         size="sm"
@@ -40,6 +38,15 @@ export function MonthNavigator({
         className="text-muted-foreground text-xs px-2"
       >
         →
+      </Button>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onToday}
+        className="text-xs px-2"
+      >
+        Today
       </Button>
     </div>
   );
