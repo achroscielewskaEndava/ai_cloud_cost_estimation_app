@@ -61,7 +61,7 @@ export default function Admin() {
   const fetchProviders = async (isInitial?: boolean) => {
     try {
       if (isInitial) setFetchingProviders(true);
-      const response = await fetch("/api/providers");
+      const response = await fetch("/api/admin/providers");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -83,7 +83,7 @@ export default function Admin() {
 
     try {
       setLoading(true);
-      const response = await fetch("/api/providers", {
+      const response = await fetch("/api/admin/providers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newProvider.trim() }),
@@ -105,7 +105,7 @@ export default function Admin() {
   const deleteProvider = async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/providers/${id}`, {
+      const response = await fetch(`/api/admin/providers/${id}`, {
         method: "DELETE",
       });
 
@@ -125,7 +125,7 @@ export default function Admin() {
     try {
       setUsersError(null);
       setFetchingUsers(true);
-      const response = await fetch("/api/users");
+      const response = await fetch("/api/admin/users");
 
       if (!response.ok) {
         const errorBody = await response.json().catch(() => null);
@@ -157,7 +157,7 @@ export default function Admin() {
       setUsersError(null);
       setUpdatingUserEmail(email);
 
-      const response = await fetch("/api/users", {
+      const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),

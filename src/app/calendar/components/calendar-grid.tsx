@@ -1,14 +1,15 @@
 import { Check } from "lucide-react";
 import {
-  PREDEFINED_TASKS,
   getDaysInMonth,
   makeDateKey,
   type CompletionMap,
+  type PredefinedTask,
 } from "@/lib/calendarData";
 
 interface CalendarGridProps {
   year: number;
   month: number;
+  tasks: PredefinedTask[];
   completions: CompletionMap;
   onToggle: (dateKey: string, taskId: string) => void;
 }
@@ -16,6 +17,7 @@ interface CalendarGridProps {
 export function CalendarGrid({
   year,
   month,
+  tasks,
   completions,
   onToggle,
 }: CalendarGridProps) {
@@ -23,7 +25,7 @@ export function CalendarGrid({
   const dayNumbers = Array.from({ length: days }, (_, i) => i + 1);
 
   const totals: Record<string, number> = {};
-  PREDEFINED_TASKS.forEach((t) => {
+  tasks.forEach((t) => {
     totals[t.id] = 0;
     dayNumbers.forEach((d) => {
       const key = makeDateKey(year, month, d);
@@ -45,13 +47,13 @@ export function CalendarGrid({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-[11px] uppercase tracking-widest text-muted-foreground font-medium border-b min-w-[90px]">
+            <th className="sticky left-0 z-10 bg-card px-4 py-3 text-left text-[11px] uppercase tracking-widest text-muted-foreground font-medium border-b min-w-22.5">
               Day
             </th>
-            {PREDEFINED_TASKS.map((task) => (
+            {tasks.map((task) => (
               <th
                 key={task.id}
-                className="px-2 py-3 text-center text-[11px] uppercase tracking-widest text-muted-foreground font-medium border-b min-w-[76px]"
+                className="px-2 py-3 text-center text-[11px] uppercase tracking-widest text-muted-foreground font-medium border-b min-w-19"
               >
                 {task.label}
               </th>
@@ -68,21 +70,25 @@ export function CalendarGrid({
             return (
               <tr
                 key={day}
-                className={`transition-colors ${isWe ? "bg-muted/30" : ""} ${isTd ? "bg-primary/[0.04]" : ""}`}
+                className={`transition-colors ${isWe ? "bg-muted/30" : ""} ${isTd ? "bg-accent/15 ring-1 ring-inset ring-accent/40" : ""}`}
               >
-                <td className="sticky left-0 z-10 bg-card px-4 py-0 border-b">
+                <td
+                  className={`sticky left-0 z-10 px-4 py-0 border-b ${isTd ? "bg-accent/20" : "bg-card"}`}
+                >
                   <div className="flex items-center gap-2">
                     <span
-                      className={`text-[13px] font-semibold tabular-nums ${isTd ? "text-primary" : "text-foreground"}`}
+                      className={`inline-flex min-w-7 items-center justify-center rounded-md px-2 py-1 text-[13px] font-semibold tabular-nums ${isTd ? "bg-accent text-white shadow-sm" : "text-foreground"}`}
                     >
                       {day}
                     </span>
-                    <span className="text-[11px] text-muted-foreground/60">
+                    <span
+                      className={`text-[11px] ${isTd ? "font-medium text-accent" : "text-muted-foreground/60"}`}
+                    >
                       {dow}
                     </span>
                   </div>
                 </td>
-                {PREDEFINED_TASKS.map((task) => {
+                {tasks.map((task) => {
                   const checked = !!completions[dateKey]?.[task.id];
                   return (
                     <td key={task.id} className="border-b p-0">
@@ -117,7 +123,7 @@ export function CalendarGrid({
             <td className="sticky left-0 z-10 bg-card px-4 py-2.5 text-[11px] uppercase tracking-widest text-muted-foreground font-medium">
               Total
             </td>
-            {PREDEFINED_TASKS.map((task) => {
+            {tasks.map((task) => {
               const pct = Math.round((totals[task.id] / days) * 100);
               return (
                 <td key={task.id} className="text-center py-2.5">

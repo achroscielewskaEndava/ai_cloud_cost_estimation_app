@@ -75,7 +75,7 @@ export default function EstimationDashboard({ providers }: Props) {
     try {
       setFetching(true);
       const response = await fetch(
-        `/api/estimations-statistics?${queryKey}=${date}`,
+        `/api/admin/estimations-statistics?${queryKey}=${date}`,
       );
 
       if (!response.ok) {

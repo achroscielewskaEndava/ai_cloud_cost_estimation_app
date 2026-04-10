@@ -29,7 +29,7 @@ export default function Providers({
   const fetchProviders = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/providers");
+      const response = await fetch("/api/admin/providers");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

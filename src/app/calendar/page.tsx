@@ -6,8 +6,10 @@ import { MonthNavigator } from "@/components/calendar/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
 import {
   generateMockCompletions,
+  syncCompletionsWithTasks,
   type CompletionMap,
   type MonthlyTask,
+  type PredefinedTask,
 } from "@/lib/calendarData";
 import { useTodos } from "@/app/calendar/hooks/useTodos";
 
@@ -19,34 +21,115 @@ export default function Calendar() {
 
   const [allCompletions, setAllCompletions] = useState<
     Record<string, CompletionMap>
-  >(() => {
-    const key = `${now.getFullYear()}-${now.getMonth()}`;
-    return {
-      [key]: generateMockCompletions(now.getFullYear(), now.getMonth()),
-    };
-  });
+  >({});
+  const [allPredefinedTasks, setAllPredefinedTasks] = useState<
+    Record<string, PredefinedTask[]>
+  >({});
+  const [loadingTasksByMonth, setLoadingTasksByMonth] = useState<
+    Record<string, boolean>
+  >({});
+  const [taskErrorsByMonth, setTaskErrorsByMonth] = useState<
+    Record<string, string | null>
+  >({});
 
   const monthKey = `${year}-${month}`;
+  const monthTasks = allPredefinedTasks[monthKey] ?? [];
+  const monthCompletions =
+    allCompletions[monthKey] ??
+    syncCompletionsWithTasks(year, month, monthTasks);
 
   const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
+
+  const loadPredefinedTasks = useCallback(
+    async (targetYear: number, targetMonth: number, targetMonthKey: string) => {
+      setLoadingTasksByMonth((prev) => ({ ...prev, [targetMonthKey]: true }));
+      setTaskErrorsByMonth((prev) => ({ ...prev, [targetMonthKey]: null }));
+
+      try {
+        const response = await fetch(
+          `/api/calendar-predefined-tasks?year=${targetYear}&month=${targetMonth}`,
+        );
+
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(
+            errorPayload?.error ??
+              `Failed to load predefined tasks (${response.status})`,
+          );
+        }
+
+        const payload = (await response.json()) as { data?: PredefinedTask[] };
+        const loadedTasks = Array.isArray(payload.data) ? payload.data : [];
+
+        setAllPredefinedTasks((prev) => ({
+          ...prev,
+          [targetMonthKey]: loadedTasks,
+        }));
+        setAllCompletions((prev) => {
+          const existingMonth = prev[targetMonthKey];
+
+          return {
+            ...prev,
+            [targetMonthKey]: existingMonth
+              ? syncCompletionsWithTasks(
+                  targetYear,
+                  targetMonth,
+                  loadedTasks,
+                  existingMonth,
+                )
+              : generateMockCompletions(targetYear, targetMonth, loadedTasks),
+          };
+        });
+      } catch (loadError) {
+        const message =
+          loadError instanceof Error
+            ? loadError.message
+            : "Failed to load predefined tasks";
+
+        setTaskErrorsByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: message,
+        }));
+      } finally {
+        setLoadingTasksByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: false,
+        }));
+      }
+    },
+    [],
+  );
 
   const toggleCell = useCallback(
     (dateKey: string, taskId: string) => {
       setAllCompletions((prev) => {
-        const monthData = { ...(prev[monthKey] || {}) };
+        const monthData = {
+          ...(prev[monthKey] ??
+            syncCompletionsWithTasks(year, month, monthTasks)),
+        };
         const dayData = { ...(monthData[dateKey] || {}) };
         dayData[taskId] = !dayData[taskId];
         monthData[dateKey] = dayData;
         return { ...prev, [monthKey]: monthData };
       });
     },
-    [monthKey],
+    [month, monthKey, monthTasks, year],
   );
 
-  if (!allCompletions[monthKey]) {
-    const mock = generateMockCompletions(year, month);
-    setAllCompletions((prev) => ({ ...prev, [monthKey]: mock }));
-  }
+  useEffect(() => {
+    if (allPredefinedTasks[monthKey] || loadingTasksByMonth[monthKey]) return;
+
+    void loadPredefinedTasks(year, month, monthKey);
+  }, [
+    allPredefinedTasks,
+    loadPredefinedTasks,
+    loadingTasksByMonth,
+    month,
+    monthKey,
+    year,
+  ]);
 
   useEffect(() => {
     if (allTodos[monthKey] || loadingTodosByMonth[monthKey]) return;
@@ -95,22 +178,33 @@ export default function Calendar() {
             onNext={() => navigate(1)}
             onToday={goToday}
           />
-          <div className="w-[80px]" />
+          <div className="w-20" />
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0">
+            {taskErrorsByMonth[monthKey] ? (
+              <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {taskErrorsByMonth[monthKey]}
+              </div>
+            ) : null}
             <CalendarGrid
               year={year}
               month={month}
-              completions={allCompletions[monthKey]}
+              tasks={monthTasks}
+              completions={monthCompletions}
               onToggle={toggleCell}
             />
+            {loadingTasksByMonth[monthKey] ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Loading predefined tasks...
+              </p>
+            ) : null}
           </div>
           <div className="lg:w-72 shrink-0">
-            <div className="sticky top-[72px]">
+            <div className="sticky top-18">
               <TodoSidebar
                 tasks={allTodos[monthKey] ?? []}
                 onUpdate={handleUpdateTodos}

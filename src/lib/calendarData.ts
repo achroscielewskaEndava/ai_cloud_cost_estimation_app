@@ -1,11 +1,3 @@
-export const PREDEFINED_TASKS = [
-  { id: "workFromOffice", label: "Work from Office" },
-  { id: "workation", label: "Workation" },
-  { id: "holidays2025", label: "Holidays 2025" },
-  { id: "holidays2026", label: "Holidays 2026" },
-  { id: "learningReact", label: "Learning React" },
-];
-
 export interface PredefinedTask {
   id: string;
   label: string;
@@ -35,16 +27,41 @@ export function makeDateKey(year: number, month: number, day: number): string {
 export function generateMockCompletions(
   year: number,
   month: number,
+  tasks: PredefinedTask[],
 ): CompletionMap {
   const days = getDaysInMonth(year, month);
   const map: CompletionMap = {};
   for (let d = 1; d <= days; d++) {
     const key = makeDateKey(year, month, d);
     const dayData: Record<string, boolean> = {};
-    PREDEFINED_TASKS.forEach((t) => {
+    tasks.forEach((t) => {
       dayData[t.id] = Math.random() > 0.55;
     });
     map[key] = dayData;
   }
+  return map;
+}
+
+export function syncCompletionsWithTasks(
+  year: number,
+  month: number,
+  tasks: PredefinedTask[],
+  existing: CompletionMap = {},
+): CompletionMap {
+  const days = getDaysInMonth(year, month);
+  const map: CompletionMap = {};
+
+  for (let day = 1; day <= days; day++) {
+    const key = makeDateKey(year, month, day);
+    const existingDay = existing[key] ?? {};
+    const dayData: Record<string, boolean> = {};
+
+    tasks.forEach((task) => {
+      dayData[task.id] = existingDay[task.id] ?? false;
+    });
+
+    map[key] = dayData;
+  }
+
   return map;
 }

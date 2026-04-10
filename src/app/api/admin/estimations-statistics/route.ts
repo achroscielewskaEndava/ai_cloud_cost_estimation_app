@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/server";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import { Session, getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -109,7 +109,6 @@ export async function POST(req: Request) {
 
   const uniqueProviderIds = Array.from(new Set(providerIds));
 
-  // Create estimation_statistics row
   const { data: estimation, error: estErr } = await supabase
     .from("estimations_statistics")
     .insert({})
@@ -133,7 +132,6 @@ export async function POST(req: Request) {
     .insert(joinRows);
 
   if (joinErr) {
-    // Optional cleanup: delete the estimation row if join insert fails
     await supabase
       .from("estimations_statistics")
       .delete()
