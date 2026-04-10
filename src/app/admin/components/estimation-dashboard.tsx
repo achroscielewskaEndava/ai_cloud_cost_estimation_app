@@ -2,13 +2,13 @@
 
 import DashboardParameters, {
   VIEW_MODES,
-} from "@/app/admin/components/DashboardParameters";
-import Legend from "@/app/admin/components/Legend";
+} from "@/app/admin/components/dashboard-parameters";
+import Legend from "@/app/admin/components/legend";
 import {
   MonthOrDayPickerValue,
   RangeMonthOrDayPickerValue,
-} from "@/app/admin/components/MonthOrDayPicker";
-import SummaryTable from "@/app/admin/components/SummaryTable";
+} from "@/app/admin/components/month-or-day-picker";
+import SummaryTable from "@/app/admin/components/summary-table";
 import {
   Card,
   CardContent,
@@ -18,8 +18,8 @@ import {
 } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import responseCompareMock from "../../data/statisticsResponseCompare.json";
-import TopProviders from "@/app/admin/components/TopProviders";
-import ProviderCharts from "@/app/admin/components/ProviderCharts";
+import TopProviders from "@/app/admin/components/top-providers";
+import ProviderCharts from "@/app/admin/components/provider-charts";
 import { format } from "date-fns";
 
 interface SingleResponse {

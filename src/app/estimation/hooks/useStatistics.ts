@@ -1,4 +1,4 @@
-import { Provider } from "@/app/estimation/components/Providers";
+import { Provider } from "@/app/estimation/components/providers";
 
 export function useStatistics() {
   const saveStatistics = async (selectedProviders: Provider[]) => {

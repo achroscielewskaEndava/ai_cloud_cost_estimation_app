@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { CalendarGrid } from "@/components/CalendarGrid";
+import { CalendarGrid } from "@/components/calendar-grid";
 import { MonthNavigator } from "@/app/calendar/components/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
 import {

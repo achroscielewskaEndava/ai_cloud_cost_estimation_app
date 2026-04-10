@@ -13,7 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import EstimationDashboard from "@/app/admin/components/EstimationDashboard";
+import EstimationDashboard from "@/app/admin/components/estimation-dashboard";
 
 export default function Admin() {
   const { data: session } = useSession();

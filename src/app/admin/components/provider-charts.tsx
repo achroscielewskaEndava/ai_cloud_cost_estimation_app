@@ -12,7 +12,7 @@ import {
   Pie,
   ResponsiveContainer,
 } from "recharts";
-import { DEFAULT_COLOR, PROVIDER_HEX } from "@/app/admin/components/Legend";
+import { DEFAULT_COLOR, PROVIDER_HEX } from "@/app/admin/components/legend";
 
 interface SingleData {
   provider: string;
