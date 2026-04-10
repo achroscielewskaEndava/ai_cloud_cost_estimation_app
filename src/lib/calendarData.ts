@@ -1,11 +1,15 @@
 export const PREDEFINED_TASKS = [
-  { id: "exercise", label: "Exercise" },
-  { id: "reading", label: "Reading" },
-  { id: "water", label: "Water 2L" },
-  { id: "meditation", label: "Meditate" },
-  { id: "journal", label: "Journal" },
-  { id: "sleep8h", label: "Sleep 8h" },
+  { id: "workFromOffice", label: "Work from Office" },
+  { id: "workation", label: "Workation" },
+  { id: "holidays2025", label: "Holidays 2025" },
+  { id: "holidays2026", label: "Holidays 2026" },
+  { id: "learningReact", label: "Learning React" },
 ];
+
+export interface PredefinedTask {
+  id: string;
+  label: string;
+}
 
 export interface MonthlyTask {
   id: string;
@@ -43,14 +47,4 @@ export function generateMockCompletions(
     map[key] = dayData;
   }
   return map;
-}
-
-export function generateMockMonthlyTasks(): MonthlyTask[] {
-  return [
-    { id: "m1", text: "Finish project proposal", completed: true },
-    { id: "m2", text: "Schedule dentist appointment", completed: false },
-    { id: "m3", text: "Read 2 books", completed: false },
-    { id: "m4", text: "Clean out garage", completed: false },
-    { id: "m5", text: "Plan weekend trip", completed: true },
-  ];
 }
