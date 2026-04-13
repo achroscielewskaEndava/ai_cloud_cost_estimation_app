@@ -88,6 +88,7 @@ export default function EstimationPage() {
               onClick={() => handleEstimation()}
               disabled={loading || selectedProviders.length === 0}
               className="px-8 py-6 text-base font-semibold rounded-xl"
+              data-testid="get-estimates-btn"
             >
               {loading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
