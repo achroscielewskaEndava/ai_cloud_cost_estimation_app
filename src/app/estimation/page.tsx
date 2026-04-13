@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, RefreshCw, RotateCcw, Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Usage from "@/app/estimation/components/Usage";
-import Results from "@/app/estimation/components/Result;
+import Results from "@/app/estimation/components/Results";
 import Providers, { Provider } from "@/app/estimation/components/Providers";
 import { useStatistics } from "@/app/estimation/hooks/useStatistics";
 import { useSendToAI } from "@/app/estimation/hooks/useSendToAi";
