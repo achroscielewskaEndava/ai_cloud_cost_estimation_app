@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
-    "@types/next-auth": "^3.13.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -33,7 +32,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "shadcn": "^3.8.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
