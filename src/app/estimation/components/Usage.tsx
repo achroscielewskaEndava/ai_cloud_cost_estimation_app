@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 import {
   Collapsible,
@@ -39,6 +40,12 @@ type Group = {
 
 export default function UsageModern({ answers, setAnswers }: Props) {
   const [open, setOpen] = useState(true);
+
+  const getOptionId = (questionId: string, option: string) =>
+    `${questionId}-${option
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")}`;
 
   const groups = useMemo(() => {
     const byCat = new Map<string, Group>();
@@ -196,20 +203,25 @@ export default function UsageModern({ answers, setAnswers }: Props) {
                             className="mt-3"
                           >
                             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                              {q.options.map((opt) => (
-                                <label
-                                  key={opt}
-                                  className="flex items-center gap-2 cursor-pointer rounded-lg border border-border px-3 py-3 transition-colors hover:bg-muted data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 shadow-xs"
-                                  data-selected={answers[q.id] === opt}
-                                >
-                                  <RadioGroupItem value={opt} />
-                                  <div className="flex items-start gap-3">
-                                    <span className="text-sm leading-snug">
-                                      {opt}
-                                    </span>
-                                  </div>
-                                </label>
-                              ))}
+                              {q.options.map((opt) => {
+                                const optionId = getOptionId(q.id, opt);
+
+                                return (
+                                  <Label
+                                    key={opt}
+                                    htmlFor={optionId}
+                                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-3 transition-colors hover:bg-muted data-[selected=true]:border-primary data-[selected=true]:bg-primary/5 shadow-xs"
+                                    data-selected={answers[q.id] === opt}
+                                  >
+                                    <RadioGroupItem id={optionId} value={opt} />
+                                    <div className="flex items-start gap-3">
+                                      <span className="text-sm leading-snug">
+                                        {opt}
+                                      </span>
+                                    </div>
+                                  </Label>
+                                );
+                              })}
                             </div>
                           </RadioGroup>
                         </div>
