@@ -42,6 +42,30 @@ function ensureAdmin(session: Session | null) {
   return null;
 }
 
+async function resolveUserId(session: Session) {
+  const email = session.user?.email?.toLowerCase();
+
+  if (!email) {
+    return { userId: null, error: "User email is missing in session" };
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .ilike("email", email)
+    .maybeSingle();
+
+  if (error) {
+    return { userId: null, error: error.message };
+  }
+
+  if (!data?.id) {
+    return { userId: null, error: "User not found" };
+  }
+
+  return { userId: data.id, error: null };
+}
+
 function isValidTaskArray(value: unknown): value is PredefinedTaskInput[] {
   if (!Array.isArray(value)) return false;
 
@@ -109,6 +133,14 @@ export async function GET(req: Request) {
   const authError = ensureAdmin(session);
   if (authError) return authError;
 
+  const { userId, error: userError } = await resolveUserId(session as Session);
+  if (userError || !userId) {
+    return NextResponse.json(
+      { error: userError ?? "Unable to resolve user" },
+      { status: 401 },
+    );
+  }
+
   const { searchParams } = new URL(req.url);
   const parsed = parseYearAndMonth(
     searchParams.get("year"),
@@ -125,6 +157,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("calendar_predefined_tasks_monthly")
     .select("task_id, label")
+    .eq("user_id", userId)
     .eq("year", parsed.year)
     .eq("month", parsed.month)
     .order("position", { ascending: true });
@@ -145,6 +178,14 @@ export async function POST(req: Request) {
   const session: Session | null = await getServerSession(authOptions);
   const authError = ensureAdmin(session);
   if (authError) return authError;
+
+  const { userId, error: userError } = await resolveUserId(session as Session);
+  if (userError || !userId) {
+    return NextResponse.json(
+      { error: userError ?? "Unable to resolve user" },
+      { status: 401 },
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const yearRaw = body?.year;
@@ -172,6 +213,7 @@ export async function POST(req: Request) {
   const { data: existingRows, error: existingError } = await supabase
     .from("calendar_predefined_tasks_monthly")
     .select("task_id, position")
+    .eq("user_id", userId)
     .eq("year", parsed.year)
     .eq("month", parsed.month)
     .order("position", { ascending: false });
@@ -197,6 +239,7 @@ export async function POST(req: Request) {
   const { error: insertError } = await supabase
     .from("calendar_predefined_tasks_monthly")
     .insert({
+      user_id: userId,
       year: parsed.year,
       month: parsed.month,
       task_id: taskId,
@@ -218,6 +261,14 @@ export async function PUT(req: Request) {
   const session: Session | null = await getServerSession(authOptions);
   const authError = ensureAdmin(session);
   if (authError) return authError;
+
+  const { userId, error: userError } = await resolveUserId(session as Session);
+  if (userError || !userId) {
+    return NextResponse.json(
+      { error: userError ?? "Unable to resolve user" },
+      { status: 401 },
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const yearRaw = body?.year;
@@ -250,6 +301,7 @@ export async function PUT(req: Request) {
   const { error: deleteError } = await supabase
     .from("calendar_predefined_tasks_monthly")
     .delete()
+    .eq("user_id", userId)
     .eq("year", parsed.year)
     .eq("month", parsed.month);
 
@@ -259,6 +311,7 @@ export async function PUT(req: Request) {
 
   if (normalized.length > 0) {
     const rows = normalized.map((task, index) => ({
+      user_id: userId,
       year: parsed.year,
       month: parsed.month,
       task_id: task.id,

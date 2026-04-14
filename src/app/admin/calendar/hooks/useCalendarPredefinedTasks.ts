@@ -20,12 +20,12 @@ export function useCalendarPredefinedTasks({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const clearFeedback = useCallback(() => {
+  const clearFeedback = () => {
     setError(null);
     setSuccess(null);
-  }, []);
+  };
 
-  const loadTasks = useCallback(async () => {
+  const loadTasks = async () => {
     clearFeedback();
     setIsLoading(true);
 
@@ -57,62 +57,59 @@ export function useCalendarPredefinedTasks({
     } finally {
       setIsLoading(false);
     }
-  }, [clearFeedback, month, year]);
+  };
 
-  const addTask = useCallback(
-    async (labelRaw: string, idRaw?: string) => {
-      const label = labelRaw.trim();
-      const preferredId = idRaw?.trim();
+  const addTask = async (labelRaw: string, idRaw?: string) => {
+    const label = labelRaw.trim();
+    const preferredId = idRaw?.trim();
 
-      if (!label) {
-        return false;
+    if (!label) {
+      return false;
+    }
+
+    clearFeedback();
+    setIsAdding(true);
+
+    try {
+      const response = await fetch("/api/admin/calendar-predefined-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          year,
+          month,
+          label,
+          id: preferredId || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          errorPayload?.error ?? `Failed to add task (${response.status})`,
+        );
       }
 
-      clearFeedback();
-      setIsAdding(true);
+      const payload = (await response.json()) as { data?: PredefinedTask };
 
-      try {
-        const response = await fetch("/api/admin/calendar-predefined-tasks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            year,
-            month,
-            label,
-            id: preferredId || undefined,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(
-            errorPayload?.error ?? `Failed to add task (${response.status})`,
-          );
-        }
-
-        const payload = (await response.json()) as { data?: PredefinedTask };
-
-        if (payload.data) {
-          setTasks((prev) => [...prev, payload.data as PredefinedTask]);
-        }
-
-        setSuccess("Task added.");
-        return true;
-      } catch (addError) {
-        const message =
-          addError instanceof Error ? addError.message : "Failed to add task";
-        setError(message);
-        return false;
-      } finally {
-        setIsAdding(false);
+      if (payload.data) {
+        setTasks((prev) => [...prev, payload.data as PredefinedTask]);
       }
-    },
-    [clearFeedback, month, year],
-  );
 
-  const saveTasks = useCallback(async () => {
+      setSuccess("Task added.");
+      return true;
+    } catch (addError) {
+      const message =
+        addError instanceof Error ? addError.message : "Failed to add task";
+      setError(message);
+      return false;
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const saveTasks = async () => {
     clearFeedback();
     setIsSaving(true);
 
@@ -151,9 +148,9 @@ export function useCalendarPredefinedTasks({
     } finally {
       setIsSaving(false);
     }
-  }, [clearFeedback, month, tasks, year]);
+  };
 
-  const copyFromPreviousMonth = useCallback(async () => {
+  const copyFromPreviousMonth = async () => {
     clearFeedback();
     setIsCopying(true);
 
@@ -197,7 +194,7 @@ export function useCalendarPredefinedTasks({
     } finally {
       setIsCopying(false);
     }
-  }, [clearFeedback, month, year]);
+  };
 
   return {
     tasks,

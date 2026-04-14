@@ -22,10 +22,42 @@ function parseYearAndMonth(yearRaw: string | null, monthRaw: string | null) {
   return { year, month };
 }
 
+async function resolveUserId(session: Session) {
+  const email = session.user?.email?.toLowerCase();
+
+  if (!email) {
+    return { userId: null, error: "User email is missing in session" };
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .ilike("email", email)
+    .maybeSingle();
+
+  if (error) {
+    return { userId: null, error: error.message };
+  }
+
+  if (!data?.id) {
+    return { userId: null, error: "User not found" };
+  }
+
+  return { userId: data.id, error: null };
+}
+
 export async function GET(req: Request) {
   const session: Session | null = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { userId, error: userError } = await resolveUserId(session);
+  if (userError || !userId) {
+    return NextResponse.json(
+      { error: userError ?? "Unable to resolve user" },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
@@ -44,6 +76,7 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from("calendar_predefined_tasks_monthly")
     .select("task_id, label")
+    .eq("user_id", userId)
     .eq("year", parsed.year)
     .eq("month", parsed.month)
     .order("position", { ascending: true });

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MonthNavigator } from "@/components/calendar/month-navigator";
-import { Copy, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { Copy, GripVertical, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import type { PredefinedTask } from "@/lib/calendarData";
 import { useCalendarPredefinedTasks } from "@/app/admin/calendar/hooks/useCalendarPredefinedTasks";
 
@@ -17,6 +17,10 @@ export default function AdminCalendarPage() {
 
   const [newTaskLabel, setNewTaskLabel] = useState("");
   const [newTaskId, setNewTaskId] = useState("");
+  const [draggedTaskIndex, setDraggedTaskIndex] = useState<number | null>(null);
+  const [dragOverTaskIndex, setDragOverTaskIndex] = useState<number | null>(
+    null,
+  );
 
   const {
     tasks,
@@ -38,7 +42,8 @@ export default function AdminCalendarPage() {
 
   useEffect(() => {
     void loadTasks();
-  }, [loadTasks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month]);
 
   const navigate = (dir: -1 | 1) => {
     setMonth((prev) => {
@@ -88,9 +93,52 @@ export default function AdminCalendarPage() {
     clearFeedback();
   };
 
-  const headerText = useMemo(() => {
-    return `Managing ${month + 1}/${year}`;
-  }, [month, year]);
+  const moveTask = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) {
+      return;
+    }
+
+    setTasks((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+
+    setIsDirty(true);
+    clearFeedback();
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedTaskIndex(index);
+    setDragOverTaskIndex(index);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+    if (dragOverTaskIndex !== index) {
+      setDragOverTaskIndex(index);
+    }
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>, index: number) => {
+    event.preventDefault();
+
+    if (draggedTaskIndex === null) {
+      return;
+    }
+
+    moveTask(draggedTaskIndex, index);
+    setDraggedTaskIndex(null);
+    setDragOverTaskIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTaskIndex(null);
+    setDragOverTaskIndex(null);
+  };
+
+  const headerText = `Managing ${month + 1}/${year}`;
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-12">
@@ -135,6 +183,9 @@ export default function AdminCalendarPage() {
           </div>
 
           <div className="rounded-xl border p-3 sm:p-4 space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Drag rows by the handle to change task order.
+            </p>
             <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
               <Input
                 placeholder="Task label (e.g. Work from Office)"
@@ -176,8 +227,22 @@ export default function AdminCalendarPage() {
               tasks.map((task, index) => (
                 <div
                   key={`${task.id}-${index}`}
-                  className="grid gap-2 p-3 md:grid-cols-[220px_1fr_auto]"
+                  onDragOver={(event) => handleDragOver(event, index)}
+                  onDrop={(event) => handleDrop(event, index)}
+                  className={`grid gap-2 p-3 md:grid-cols-[auto_220px_1fr_auto] ${dragOverTaskIndex === index ? "bg-accent/10" : ""}`}
                 >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnd={handleDragEnd}
+                    aria-label={`Drag task ${task.label}`}
+                    className="cursor-grab active:cursor-grabbing"
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                   <Input
                     value={task.id}
                     onChange={(e) => updateTask(index, "id", e.target.value)}
