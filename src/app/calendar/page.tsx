@@ -5,13 +5,10 @@ import { CalendarGrid } from "@/app/calendar/components/calendar-grid";
 import { MonthNavigator } from "@/components/calendar/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
 import { Button } from "@/components/ui/button";
-import {
-  syncCompletionsWithTasks,
-  type CompletionMap,
-  type MonthlyTask,
-  type PredefinedTask,
-} from "@/lib/calendarData";
+import { syncCompletionsWithTasks, type MonthlyTask } from "@/lib/calendarData";
 import { useTodos } from "@/app/calendar/hooks/useTodos";
+import { usePredefinedTasks } from "@/app/calendar/hooks/usePredefinedTasks";
+import useCompletions from "@/app/calendar/hooks/useCompletions";
 
 const now = new Date();
 
@@ -19,217 +16,34 @@ export default function Calendar() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  const [allCompletions, setAllCompletions] = useState<
-    Record<string, CompletionMap>
-  >({});
-  const [allPredefinedTasks, setAllPredefinedTasks] = useState<
-    Record<string, PredefinedTask[]>
-  >({});
-  const [loadingTasksByMonth, setLoadingTasksByMonth] = useState<
-    Record<string, boolean>
-  >({});
-  const [taskErrorsByMonth, setTaskErrorsByMonth] = useState<
-    Record<string, string | null>
-  >({});
-  const [loadingCompletionsByMonth, setLoadingCompletionsByMonth] = useState<
-    Record<string, boolean>
-  >({});
-  const [savingCompletionsByMonth, setSavingCompletionsByMonth] = useState<
-    Record<string, boolean>
-  >({});
-  const [dirtyCompletionsByMonth, setDirtyCompletionsByMonth] = useState<
-    Record<string, boolean>
-  >({});
-  const [completionErrorsByMonth, setCompletionErrorsByMonth] = useState<
-    Record<string, string | null>
-  >({});
+  const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
+
+  const {
+    loadPredefinedTasks,
+    allPredefinedTasks,
+    loadingTasksByMonth,
+    taskErrorsByMonth,
+  } = usePredefinedTasks();
 
   const monthKey = `${year}-${month}`;
   const monthTasks = useMemo(
     () => allPredefinedTasks[monthKey] ?? [],
     [allPredefinedTasks, monthKey],
   );
+
+  const { allCompletions, loadingCompletionsByMonth, loadCompletions } =
+    useCompletions();
+
+  const {
+    saveCompletions,
+    savingCompletionsByMonth,
+    dirtyCompletionsByMonth,
+    completionErrorsByMonth,
+  } = useCompletions();
+
   const monthCompletions =
     allCompletions[monthKey] ??
     syncCompletionsWithTasks(year, month, monthTasks);
-
-  const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
-
-  const saveCompletions = useCallback(
-    async (
-      targetYear: number,
-      targetMonth: number,
-      targetMonthKey: string,
-      completions: CompletionMap,
-    ) => {
-      setSavingCompletionsByMonth((prev) => ({
-        ...prev,
-        [targetMonthKey]: true,
-      }));
-      setCompletionErrorsByMonth((prev) => ({
-        ...prev,
-        [targetMonthKey]: null,
-      }));
-
-      const response = await fetch("/api/calendar-completions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          year: targetYear,
-          month: targetMonth,
-          completions,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorPayload = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-
-        const message =
-          errorPayload?.error ??
-          `Failed to save completions (${response.status})`;
-
-        setCompletionErrorsByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: message,
-        }));
-
-        setSavingCompletionsByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: false,
-        }));
-
-        throw new Error(message);
-      }
-
-      setDirtyCompletionsByMonth((prev) => ({
-        ...prev,
-        [targetMonthKey]: false,
-      }));
-      setSavingCompletionsByMonth((prev) => ({
-        ...prev,
-        [targetMonthKey]: false,
-      }));
-    },
-    [],
-  );
-
-  const loadPredefinedTasks = useCallback(
-    async (targetYear: number, targetMonth: number, targetMonthKey: string) => {
-      setLoadingTasksByMonth((prev) => ({ ...prev, [targetMonthKey]: true }));
-      setTaskErrorsByMonth((prev) => ({ ...prev, [targetMonthKey]: null }));
-
-      try {
-        const response = await fetch(
-          `/api/calendar-predefined-tasks?year=${targetYear}&month=${targetMonth}`,
-        );
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(
-            errorPayload?.error ??
-              `Failed to load predefined tasks (${response.status})`,
-          );
-        }
-
-        const payload = (await response.json()) as { data?: PredefinedTask[] };
-        const loadedTasks = Array.isArray(payload.data) ? payload.data : [];
-
-        setAllPredefinedTasks((prev) => ({
-          ...prev,
-          [targetMonthKey]: loadedTasks,
-        }));
-        setAllCompletions((prev) => {
-          const existingMonth = prev[targetMonthKey];
-
-          if (!existingMonth) {
-            return prev;
-          }
-
-          return {
-            ...prev,
-            [targetMonthKey]: syncCompletionsWithTasks(
-              targetYear,
-              targetMonth,
-              loadedTasks,
-              existingMonth,
-            ),
-          };
-        });
-      } catch (loadError) {
-        const message =
-          loadError instanceof Error
-            ? loadError.message
-            : "Failed to load predefined tasks";
-
-        setTaskErrorsByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: message,
-        }));
-      } finally {
-        setLoadingTasksByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: false,
-        }));
-      }
-    },
-    [],
-  );
-
-  const loadCompletions = useCallback(
-    async (targetYear: number, targetMonth: number, targetMonthKey: string) => {
-      setLoadingCompletionsByMonth((prev) => ({
-        ...prev,
-        [targetMonthKey]: true,
-      }));
-
-      try {
-        const response = await fetch(
-          `/api/calendar-completions?year=${targetYear}&month=${targetMonth}`,
-        );
-
-        if (!response.ok) {
-          const errorPayload = (await response.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-
-          throw new Error(
-            errorPayload?.error ??
-              `Failed to load completions (${response.status})`,
-          );
-        }
-
-        const payload = (await response.json()) as { data?: CompletionMap };
-        const loadedCompletions =
-          payload.data && typeof payload.data === "object" ? payload.data : {};
-
-        setAllCompletions((prev) => ({
-          ...prev,
-          [targetMonthKey]: syncCompletionsWithTasks(
-            targetYear,
-            targetMonth,
-            allPredefinedTasks[targetMonthKey] ?? [],
-            loadedCompletions,
-          ),
-        }));
-        setDirtyCompletionsByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: false,
-        }));
-      } catch (loadError) {
-        console.error(loadError);
-      } finally {
-        setLoadingCompletionsByMonth((prev) => ({
-          ...prev,
-          [targetMonthKey]: false,
-        }));
-      }
-    },
-    [allPredefinedTasks],
-  );
 
   const toggleCell = useCallback(
     (dateKey: string, taskId: string) => {
@@ -254,7 +68,7 @@ export default function Calendar() {
       allCompletions[monthKey] ??
       syncCompletionsWithTasks(year, month, monthTasks);
 
-    void saveCompletions(year, month, monthKey, current).catch((error) => {
+    saveCompletions(year, month, monthKey, current).catch((error) => {
       console.error(error);
     });
   }, [allCompletions, month, monthKey, monthTasks, saveCompletions, year]);
@@ -276,7 +90,7 @@ export default function Calendar() {
     if (!allPredefinedTasks[monthKey]) return;
     if (allCompletions[monthKey] || loadingCompletionsByMonth[monthKey]) return;
 
-    void loadCompletions(year, month, monthKey);
+    void loadCompletions(allPredefinedTasks, year, month, monthKey);
   }, [
     allCompletions,
     allPredefinedTasks,
