@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { CalendarGrid } from "@/app/calendar/components/calendar-grid";
 import { MonthNavigator } from "@/components/calendar/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
+import { Button } from "@/components/ui/button";
 import {
-  generateMockCompletions,
   syncCompletionsWithTasks,
   type CompletionMap,
   type MonthlyTask,
@@ -31,14 +31,89 @@ export default function Calendar() {
   const [taskErrorsByMonth, setTaskErrorsByMonth] = useState<
     Record<string, string | null>
   >({});
+  const [loadingCompletionsByMonth, setLoadingCompletionsByMonth] = useState<
+    Record<string, boolean>
+  >({});
+  const [savingCompletionsByMonth, setSavingCompletionsByMonth] = useState<
+    Record<string, boolean>
+  >({});
+  const [dirtyCompletionsByMonth, setDirtyCompletionsByMonth] = useState<
+    Record<string, boolean>
+  >({});
+  const [completionErrorsByMonth, setCompletionErrorsByMonth] = useState<
+    Record<string, string | null>
+  >({});
 
   const monthKey = `${year}-${month}`;
-  const monthTasks = allPredefinedTasks[monthKey] ?? [];
+  const monthTasks = useMemo(
+    () => allPredefinedTasks[monthKey] ?? [],
+    [allPredefinedTasks, monthKey],
+  );
   const monthCompletions =
     allCompletions[monthKey] ??
     syncCompletionsWithTasks(year, month, monthTasks);
 
   const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
+
+  const saveCompletions = useCallback(
+    async (
+      targetYear: number,
+      targetMonth: number,
+      targetMonthKey: string,
+      completions: CompletionMap,
+    ) => {
+      setSavingCompletionsByMonth((prev) => ({
+        ...prev,
+        [targetMonthKey]: true,
+      }));
+      setCompletionErrorsByMonth((prev) => ({
+        ...prev,
+        [targetMonthKey]: null,
+      }));
+
+      const response = await fetch("/api/calendar-completions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          year: targetYear,
+          month: targetMonth,
+          completions,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+
+        const message =
+          errorPayload?.error ??
+          `Failed to save completions (${response.status})`;
+
+        setCompletionErrorsByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: message,
+        }));
+
+        setSavingCompletionsByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: false,
+        }));
+
+        throw new Error(message);
+      }
+
+      setDirtyCompletionsByMonth((prev) => ({
+        ...prev,
+        [targetMonthKey]: false,
+      }));
+      setSavingCompletionsByMonth((prev) => ({
+        ...prev,
+        [targetMonthKey]: false,
+      }));
+    },
+    [],
+  );
 
   const loadPredefinedTasks = useCallback(
     async (targetYear: number, targetMonth: number, targetMonthKey: string) => {
@@ -70,16 +145,18 @@ export default function Calendar() {
         setAllCompletions((prev) => {
           const existingMonth = prev[targetMonthKey];
 
+          if (!existingMonth) {
+            return prev;
+          }
+
           return {
             ...prev,
-            [targetMonthKey]: existingMonth
-              ? syncCompletionsWithTasks(
-                  targetYear,
-                  targetMonth,
-                  loadedTasks,
-                  existingMonth,
-                )
-              : generateMockCompletions(targetYear, targetMonth, loadedTasks),
+            [targetMonthKey]: syncCompletionsWithTasks(
+              targetYear,
+              targetMonth,
+              loadedTasks,
+              existingMonth,
+            ),
           };
         });
       } catch (loadError) {
@@ -102,6 +179,58 @@ export default function Calendar() {
     [],
   );
 
+  const loadCompletions = useCallback(
+    async (targetYear: number, targetMonth: number, targetMonthKey: string) => {
+      setLoadingCompletionsByMonth((prev) => ({
+        ...prev,
+        [targetMonthKey]: true,
+      }));
+
+      try {
+        const response = await fetch(
+          `/api/calendar-completions?year=${targetYear}&month=${targetMonth}`,
+        );
+
+        if (!response.ok) {
+          const errorPayload = (await response.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+
+          throw new Error(
+            errorPayload?.error ??
+              `Failed to load completions (${response.status})`,
+          );
+        }
+
+        const payload = (await response.json()) as { data?: CompletionMap };
+        const loadedCompletions =
+          payload.data && typeof payload.data === "object" ? payload.data : {};
+
+        setAllCompletions((prev) => ({
+          ...prev,
+          [targetMonthKey]: syncCompletionsWithTasks(
+            targetYear,
+            targetMonth,
+            allPredefinedTasks[targetMonthKey] ?? [],
+            loadedCompletions,
+          ),
+        }));
+        setDirtyCompletionsByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: false,
+        }));
+      } catch (loadError) {
+        console.error(loadError);
+      } finally {
+        setLoadingCompletionsByMonth((prev) => ({
+          ...prev,
+          [targetMonthKey]: false,
+        }));
+      }
+    },
+    [allPredefinedTasks],
+  );
+
   const toggleCell = useCallback(
     (dateKey: string, taskId: string) => {
       setAllCompletions((prev) => {
@@ -114,9 +243,21 @@ export default function Calendar() {
         monthData[dateKey] = dayData;
         return { ...prev, [monthKey]: monthData };
       });
+
+      setDirtyCompletionsByMonth((prev) => ({ ...prev, [monthKey]: true }));
     },
     [month, monthKey, monthTasks, year],
   );
+
+  const handleSaveCompletions = useCallback(() => {
+    const current =
+      allCompletions[monthKey] ??
+      syncCompletionsWithTasks(year, month, monthTasks);
+
+    void saveCompletions(year, month, monthKey, current).catch((error) => {
+      console.error(error);
+    });
+  }, [allCompletions, month, monthKey, monthTasks, saveCompletions, year]);
 
   useEffect(() => {
     if (allPredefinedTasks[monthKey] || loadingTasksByMonth[monthKey]) return;
@@ -126,6 +267,21 @@ export default function Calendar() {
     allPredefinedTasks,
     loadPredefinedTasks,
     loadingTasksByMonth,
+    month,
+    monthKey,
+    year,
+  ]);
+
+  useEffect(() => {
+    if (!allPredefinedTasks[monthKey]) return;
+    if (allCompletions[monthKey] || loadingCompletionsByMonth[monthKey]) return;
+
+    void loadCompletions(year, month, monthKey);
+  }, [
+    allCompletions,
+    allPredefinedTasks,
+    loadCompletions,
+    loadingCompletionsByMonth,
     month,
     monthKey,
     year,
@@ -171,13 +327,27 @@ export default function Calendar() {
       <header className="border-b bg-card/60 backdrop-blur-md sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <span className="text-sm font-semibold tracking-tight text-foreground"></span>
-          <MonthNavigator
-            year={year}
-            month={month}
-            onPrev={() => navigate(-1)}
-            onNext={() => navigate(1)}
-            onToday={goToday}
-          />
+          <div className="flex items-center gap-2">
+            <MonthNavigator
+              year={year}
+              month={month}
+              onPrev={() => navigate(-1)}
+              onNext={() => navigate(1)}
+              onToday={goToday}
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveCompletions}
+              disabled={
+                savingCompletionsByMonth[monthKey] ||
+                !dirtyCompletionsByMonth[monthKey]
+              }
+              className="text-xs px-2"
+            >
+              {savingCompletionsByMonth[monthKey] ? "Saving..." : "Save"}
+            </Button>
+          </div>
           <div className="w-20" />
         </div>
       </header>
@@ -200,6 +370,11 @@ export default function Calendar() {
             {loadingTasksByMonth[monthKey] ? (
               <p className="mt-3 text-sm text-muted-foreground">
                 Loading predefined tasks...
+              </p>
+            ) : null}
+            {completionErrorsByMonth[monthKey] ? (
+              <p className="mt-2 text-sm text-destructive">
+                {completionErrorsByMonth[monthKey]}
               </p>
             ) : null}
           </div>

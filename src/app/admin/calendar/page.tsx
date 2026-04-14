@@ -4,6 +4,7 @@ import { useEffect, useState, type DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { MonthNavigator } from "@/components/calendar/month-navigator";
 import { Copy, GripVertical, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import type { PredefinedTask } from "@/lib/calendarData";
@@ -266,8 +267,18 @@ export default function AdminCalendarPage() {
             )}
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {success && <p className="text-sm text-emerald-600">{success}</p>}
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          {success && (
+            <Alert className="border-emerald-300 bg-emerald-50 text-emerald-800">
+              <AlertDescription className="text-emerald-700">
+                {success}
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="flex justify-end">
             <Button
