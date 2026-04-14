@@ -5,7 +5,7 @@ import {
 } from "@/lib/calendarData";
 import { useState } from "react";
 
-export default function useCompletions() {
+export function useCompletions() {
   const [allCompletions, setAllCompletions] = useState<
     Record<string, CompletionMap>
   >({});
@@ -138,9 +138,11 @@ export default function useCompletions() {
     saveCompletions,
     savingCompletionsByMonth,
     dirtyCompletionsByMonth,
+    setDirtyCompletionsByMonth,
     completionErrorsByMonth,
     loadCompletions,
     allCompletions,
+    setAllCompletions,
     loadingCompletionsByMonth,
   };
 }

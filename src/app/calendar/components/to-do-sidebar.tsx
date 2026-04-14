@@ -1,17 +1,32 @@
-import { useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { MonthlyTask } from "@/lib/calendarData";
+import { useTodos } from "@/app/calendar/hooks/useTodos";
 
 interface TodoSidebarProps {
-  tasks: MonthlyTask[];
-  onUpdate: (tasks: MonthlyTask[]) => void;
-  monthLabel: string;
+  year: number;
+  month: number;
 }
 
-export function TodoSidebar({ tasks, onUpdate, monthLabel }: TodoSidebarProps) {
+export function TodoSidebar({ year, month }: TodoSidebarProps) {
   const [newTask, setNewTask] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const monthKey = `${year}-${month}`;
+  const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
+  const tasks = allTodos[monthKey] ?? [];
+
+  const monthLabel = `${month + 1} / ${year}`;
+
+  useEffect(() => {
+    if (allTodos[monthKey] || loadingTodosByMonth[monthKey]) return;
+
+    loadTodos(year, month, monthKey);
+  }, [allTodos, loadTodos, loadingTodosByMonth, month, monthKey, year]);
+
+  const onUpdate = (updated: MonthlyTask[]) => {
+    updateTodos(updated, year, month, monthKey);
+  };
 
   const addTask = () => {
     const text = newTask.trim();
@@ -32,7 +47,7 @@ export function TodoSidebar({ tasks, onUpdate, monthLabel }: TodoSidebarProps) {
 
   const handleDragStart = (index: number) => setDragIndex(index);
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: DragEvent, index: number) => {
     e.preventDefault();
     if (dragIndex === null || dragIndex === index) return;
     const reordered = [...tasks];
@@ -65,7 +80,7 @@ export function TodoSidebar({ tasks, onUpdate, monthLabel }: TodoSidebarProps) {
         />
       </div>
 
-      <ul className="flex flex-col gap-0.5 min-h-[60px]">
+      <ul className="flex flex-col gap-0.5 min-h-15">
         {tasks.map((task, i) => (
           <li
             key={task.id}
@@ -97,7 +112,9 @@ export function TodoSidebar({ tasks, onUpdate, monthLabel }: TodoSidebarProps) {
         ))}
         {tasks.length === 0 && (
           <li className="text-xs text-muted-foreground/50 text-center py-6">
-            No tasks yet
+            {loadingTodosByMonth[monthKey]
+              ? "Loading tasks..."
+              : "No tasks yet"}
           </li>
         )}
       </ul>

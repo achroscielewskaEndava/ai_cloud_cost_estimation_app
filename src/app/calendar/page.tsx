@@ -5,18 +5,15 @@ import { CalendarGrid } from "@/app/calendar/components/calendar-grid";
 import { MonthNavigator } from "@/components/calendar/month-navigator";
 import { TodoSidebar } from "@/app/calendar/components/to-do-sidebar";
 import { Button } from "@/components/ui/button";
-import { syncCompletionsWithTasks, type MonthlyTask } from "@/lib/calendarData";
-import { useTodos } from "@/app/calendar/hooks/useTodos";
+import { syncCompletionsWithTasks } from "@/lib/calendarData";
 import { usePredefinedTasks } from "@/app/calendar/hooks/usePredefinedTasks";
-import useCompletions from "@/app/calendar/hooks/useCompletions";
+import { useCompletions } from "@/app/calendar/hooks/useCompletions";
 
 const now = new Date();
 
 export default function Calendar() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-
-  const { allTodos, loadingTodosByMonth, loadTodos, updateTodos } = useTodos();
 
   const {
     loadPredefinedTasks,
@@ -31,13 +28,15 @@ export default function Calendar() {
     [allPredefinedTasks, monthKey],
   );
 
-  const { allCompletions, loadingCompletionsByMonth, loadCompletions } =
-    useCompletions();
-
   const {
+    allCompletions,
+    setAllCompletions,
+    loadingCompletionsByMonth,
+    loadCompletions,
     saveCompletions,
     savingCompletionsByMonth,
     dirtyCompletionsByMonth,
+    setDirtyCompletionsByMonth,
     completionErrorsByMonth,
   } = useCompletions();
 
@@ -60,10 +59,17 @@ export default function Calendar() {
 
       setDirtyCompletionsByMonth((prev) => ({ ...prev, [monthKey]: true }));
     },
-    [month, monthKey, monthTasks, year],
+    [
+      month,
+      monthKey,
+      monthTasks,
+      setAllCompletions,
+      setDirtyCompletionsByMonth,
+      year,
+    ],
   );
 
-  const handleSaveCompletions = useCallback(() => {
+  const handleSaveCompletions = () => {
     const current =
       allCompletions[monthKey] ??
       syncCompletionsWithTasks(year, month, monthTasks);
@@ -71,12 +77,12 @@ export default function Calendar() {
     saveCompletions(year, month, monthKey, current).catch((error) => {
       console.error(error);
     });
-  }, [allCompletions, month, monthKey, monthTasks, saveCompletions, year]);
+  };
 
   useEffect(() => {
     if (allPredefinedTasks[monthKey] || loadingTasksByMonth[monthKey]) return;
 
-    void loadPredefinedTasks(year, month, monthKey);
+    loadPredefinedTasks(year, month, monthKey);
   }, [
     allPredefinedTasks,
     loadPredefinedTasks,
@@ -90,7 +96,7 @@ export default function Calendar() {
     if (!allPredefinedTasks[monthKey]) return;
     if (allCompletions[monthKey] || loadingCompletionsByMonth[monthKey]) return;
 
-    void loadCompletions(allPredefinedTasks, year, month, monthKey);
+    loadCompletions(allPredefinedTasks, year, month, monthKey);
   }, [
     allCompletions,
     allPredefinedTasks,
@@ -100,21 +106,6 @@ export default function Calendar() {
     monthKey,
     year,
   ]);
-
-  useEffect(() => {
-    if (allTodos[monthKey] || loadingTodosByMonth[monthKey]) return;
-
-    const handleLoadTodos = async () => {
-      await loadTodos(year, month, monthKey);
-    };
-
-    void handleLoadTodos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTodos, loadingTodosByMonth, month, monthKey, year]);
-
-  const handleUpdateTodos = async (updated: MonthlyTask[]) => {
-    await updateTodos(updated, year, month, monthKey);
-  };
 
   const navigate = (dir: -1 | 1) => {
     setMonth((prev) => {
@@ -194,11 +185,7 @@ export default function Calendar() {
           </div>
           <div className="lg:w-72 shrink-0">
             <div className="sticky top-18">
-              <TodoSidebar
-                tasks={allTodos[monthKey] ?? []}
-                onUpdate={handleUpdateTodos}
-                monthLabel={`${month + 1} / ${year}`}
-              />
+              <TodoSidebar year={year} month={month} />
             </div>
           </div>
         </div>
